@@ -3,8 +3,10 @@
 
     <string name="app_name">Mock Location from Picture</string>
     <string name="action_settings">Settings</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="action_share">Share</string>
+    <string name="clear">Clear</string>
 
     <string name="mock_locations_disabled">Mock locations disabled</string>
     <string name="enable_mock_locations">Mock locations have to be enabled to use Mock Location from Picture. Do you want to enable mock locations now?</string>
+    <string name="exif_no_latlong">Image doesn\'t contain GPS location.</string>
 </resources>

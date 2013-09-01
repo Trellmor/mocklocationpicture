@@ -30,6 +30,7 @@
 				<data android:mimeType="image/*" />
 			</intent-filter>
         </activity>
+        <service android:name="com.trellmor.mocklocationpicture.MockLocationService"></service>
     </application>
 
 </manifest>
