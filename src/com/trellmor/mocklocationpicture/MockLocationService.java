@@ -61,17 +61,24 @@ public class MockLocationService extends Service {
 
 	private void createLocationProvider(LocationManager lm) {
 		removeLocationProvider(lm);
+		try {
 		lm.addTestProvider(MOCK_LOCATION_PROVIDER_NAME, true, false, false,
 				false, true, true, true, Criteria.POWER_LOW,
 				Criteria.ACCURACY_FINE);
 		lm.setTestProviderEnabled(MOCK_LOCATION_PROVIDER_NAME, true);
 		lm.setTestProviderStatus(MOCK_LOCATION_PROVIDER_NAME,
 				LocationProvider.AVAILABLE, null, System.currentTimeMillis());
+		} catch (SecurityException e) {
+			// Mock locations are disabled
+		}
 	}
 
 	private void removeLocationProvider(LocationManager lm) {
 		if (lm.getProvider(MOCK_LOCATION_PROVIDER_NAME) != null) {
-			lm.removeTestProvider(MOCK_LOCATION_PROVIDER_NAME);
+			try {
+				lm.removeTestProvider(MOCK_LOCATION_PROVIDER_NAME);
+			} catch (SecurityException e) {
+			}
 		}
 	}
 
@@ -123,8 +130,14 @@ public class MockLocationService extends Service {
 					Log.w(TAG, e);
 				}
 
+				try {
 				mLocationManager.setTestProviderLocation(
 						MOCK_LOCATION_PROVIDER_NAME, loc);
+				} catch (SecurityException e) {
+					// Mock Locations have been disabled, stop service
+					stopSelf();
+					break;
+				}
 				try {
 					Thread.sleep(250);
 				} catch (InterruptedException e) {
