@@ -36,7 +36,7 @@ public class MockLocationService extends Service {
 	private LocationManager mLocationManager;
 	private MockGpsProvider mThread = null;
 
-	public static final String MOCK_LOCATION_PROVIDER_NAME = "MLPProvider";
+	public static final String MOCK_LOCATION_PROVIDER_NAME = "MLfPProvider";
 	public static final String EXTRA_LATITUDE = "EXTRA_LONGITUDE";
 	public static final String EXTRA_LONGITUDE = "EXTRA_LATITUDE";
 
