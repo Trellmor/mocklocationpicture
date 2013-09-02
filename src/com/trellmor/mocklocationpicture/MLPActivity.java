@@ -221,7 +221,7 @@ public class MLPActivity extends Activity implements
 	}
 
 	private void configureShareItem(MenuItem item, Uri uri, String mimeType) {
-		if (uri != null) {
+		if (uri != null && mimeType != null) {
 			item.setVisible(true);
 			ShareCompat.IntentBuilder shareIntent = ShareCompat.IntentBuilder
 					.from(MLPActivity.this);
@@ -249,12 +249,14 @@ public class MLPActivity extends Activity implements
 
 		@Override
 		protected Boolean doInBackground(Uri... params) {
+			boolean result = false;
+			
 			if (params.length == 0)
-				return false;
+				return result;
 
 			mUri = params[0];
 			if (mUri == null)
-				return false;
+				return result;
 
 			Context context = getApplicationContext();
 
@@ -280,36 +282,40 @@ public class MLPActivity extends Activity implements
 						os.close();
 					}
 
-					setMockLocation(temp.getAbsolutePath());
+					result = setMockLocation(temp.getAbsolutePath());
 					mPreview = createPreview(temp.getAbsolutePath());
 				} finally {
 					is.close();
 				}
 			} catch (FileNotFoundException e) {
 				Log.wtf(TAG, e);
-				return false;
+				return result;
 			} catch (IOException e) {
 				Log.e(TAG, e.getMessage(), e);
-				return false;
+				return result;
 			} finally {
 				if (temp != null && temp.exists()) {
 					temp.delete();
 				}
 			}
 
-			return true;
+			return result;
 		}
 
 		@Override
 		protected void onPostExecute(Boolean result) {
-			if (result) {
-				if (mImagePreview != null) {
-					mImagePreview.setImageBitmap(mPreview);
-				}
-
-				if (mMenuShare != null) {
-					configureShareItem(mMenuShare, mUri, mMimeType);
-				}
+			if (mImagePreview != null) {
+				mImagePreview.setImageBitmap(mPreview);
+			}
+			
+			if (mMenuShare != null) {
+				configureShareItem(mMenuShare, mUri, mMimeType);
+			}
+			
+			if (!result) {
+				Toast.makeText(getApplicationContext(),
+						R.string.exif_no_latlong, Toast.LENGTH_SHORT)
+						.show();
 			}
 		}
 
@@ -342,7 +348,7 @@ public class MLPActivity extends Activity implements
 			return BitmapFactory.decodeFile(path, options);
 		}
 
-		private void setMockLocation(String path) {
+		private boolean setMockLocation(String path) {
 			if (isMockLocationEnabled()) {
 
 				try {
@@ -357,15 +363,13 @@ public class MLPActivity extends Activity implements
 						intent.putExtra(MockLocationService.EXTRA_LONGITUDE,
 								latlong[1]);
 						startService(intent);
-					} else {
-						Toast.makeText(getApplicationContext(),
-								R.string.exif_no_latlong, Toast.LENGTH_SHORT)
-								.show();
+						return true;
 					}
 				} catch (IOException e) {
 					Log.e(TAG, "Failed get location from image", e);
 				}
 			}
+			return false;
 		}
 	}
 }
