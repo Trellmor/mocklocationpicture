@@ -101,7 +101,7 @@ public class MockLocationService extends Service {
 	}
 
 	/**
-	 * MLP:FiM
+	 * MLP: FiM
 	 * 
 	 * Mock Location Provider: Fake GPS is Magic
 	 * 
@@ -114,7 +114,7 @@ public class MockLocationService extends Service {
 		private LocationManager mLocationManager;
 		private float mLatitude;
 		private float mLongitude;
-		private volatile Thread mThread;
+		private volatile boolean mRunning;
 
 		public MockGpsProvider(LocationManager locationManager, float latitude,
 				float longitude) {
@@ -125,15 +125,17 @@ public class MockLocationService extends Service {
 		}
 
 		public void stopThread() {
-			Thread thread = mThread;
-			mThread = null;
-			thread.interrupt();
+			mRunning = false;
+			interrupt();
 		}
 
 		@Override
 		public void run() {
-			Thread thisThread = Thread.currentThread();
-			while (mThread == thisThread) {
+			mRunning = true;
+			for (int i = 0; i < 60 * 4; i++) {
+				if (!mRunning)
+					break;
+				
 				// Use GPS_PROVIDER to override read gps
 				Location loc = new Location(LocationManager.GPS_PROVIDER);
 				loc.setLatitude(mLatitude);
@@ -172,6 +174,12 @@ public class MockLocationService extends Service {
 					Thread.currentThread().interrupt();
 					break;
 				}
+			}
+			
+			if (mRunning) {
+				// Thread was not interrupted, stop the service
+				mRunning = false;
+				stopSelf();
 			}
 		}
 	}
