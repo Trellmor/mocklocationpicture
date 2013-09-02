@@ -31,7 +31,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 public class MockLocationService extends Service {
-	private static final String TAG = MLPActivity.class.getName();
+	private static final String TAG = MockLocationService.class.getName();
 
 	private LocationManager mLocationManager;
 	private MockGpsProvider mThread = null;
@@ -79,12 +79,13 @@ public class MockLocationService extends Service {
 	private void createLocationProvider(LocationManager lm) {
 		removeLocationProvider(lm);
 		try {
-		lm.addTestProvider(MOCK_LOCATION_PROVIDER_NAME, true, false, false,
-				false, true, true, true, Criteria.POWER_LOW,
-				Criteria.ACCURACY_FINE);
-		lm.setTestProviderEnabled(MOCK_LOCATION_PROVIDER_NAME, true);
-		lm.setTestProviderStatus(MOCK_LOCATION_PROVIDER_NAME,
-				LocationProvider.AVAILABLE, null, System.currentTimeMillis());
+			lm.addTestProvider(MOCK_LOCATION_PROVIDER_NAME, true, false, false,
+					false, true, true, true, Criteria.POWER_LOW,
+					Criteria.ACCURACY_FINE);
+			lm.setTestProviderEnabled(MOCK_LOCATION_PROVIDER_NAME, true);
+			lm.setTestProviderStatus(MOCK_LOCATION_PROVIDER_NAME,
+					LocationProvider.AVAILABLE, null,
+					System.currentTimeMillis());
 		} catch (SecurityException e) {
 			// Mock locations are disabled
 		}
@@ -99,6 +100,16 @@ public class MockLocationService extends Service {
 		}
 	}
 
+	/**
+	 * MLP:FiM
+	 * 
+	 * Mock Location Provider: Fake GPS is Magic
+	 * 
+	 * (Did you think I was talking about little pastel horses?)
+	 * 
+	 * @author Daniel
+	 * 
+	 */
 	private class MockGpsProvider extends Thread {
 		private LocationManager mLocationManager;
 		private float mLatitude;
@@ -148,8 +159,8 @@ public class MockLocationService extends Service {
 				}
 
 				try {
-				mLocationManager.setTestProviderLocation(
-						MOCK_LOCATION_PROVIDER_NAME, loc);
+					mLocationManager.setTestProviderLocation(
+							MOCK_LOCATION_PROVIDER_NAME, loc);
 				} catch (SecurityException e) {
 					// Mock Locations have been disabled, stop service
 					stopSelf();
