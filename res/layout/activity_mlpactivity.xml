@@ -34,7 +34,7 @@
         
         <Button 
             android:id="@+id/button_clear"
-            android:onClick="clear"
+            android:onClick="onButtonClearClick"
             android:text="@string/clear"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
