@@ -31,6 +31,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.support.v4.app.ShareCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -40,8 +41,12 @@ import android.widget.Toast;
 
 public class MLPActivity extends Activity {
 	private static final String TAG = MLPActivity.class.getName();
+	
 	private ImageView mImagePreview;
+	private MenuItem mMenuShare;
+	
 	private Uri mImageUri = null;
+	private String mMimeType;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +62,7 @@ public class MLPActivity extends Activity {
 		if (Intent.ACTION_SEND.equals(action) && type != null
 				&& type.startsWith("image/")) {
 			// Started by share intent, display preview image
-			mImageUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+			setImageUri((Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM), type);
 			if (mImageUri != null) {
 				showPreview(convertMediaUriToPath(mImageUri));
 			}
@@ -109,6 +114,9 @@ public class MLPActivity extends Activity {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.mlpactivity, menu);
 
+		mMenuShare = menu.findItem(R.id.action_share);
+		configureShareItem(mMenuShare);
+		
 		// Return true to display menu
 		return true;
 	}
@@ -124,7 +132,7 @@ public class MLPActivity extends Activity {
 	}
 	
 	public void clear(View v) {
-		mImageUri = null;
+		setImageUri(null, null);
 		stopService(new Intent(this, MockLocationService.class));
 		mImagePreview.setImageBitmap(null);
 	}
@@ -186,5 +194,26 @@ public class MLPActivity extends Activity {
 		options.inJustDecodeBounds = false;
 		
 		mImagePreview.setImageBitmap(BitmapFactory.decodeFile(path, options));
+	}
+	
+	private void configureShareItem(MenuItem item) {
+		if (mImageUri != null) {
+			item.setVisible(true);
+			ShareCompat.IntentBuilder shareIntent = ShareCompat.IntentBuilder.from(this);
+			shareIntent.setStream(mImageUri);
+			shareIntent.setType(mMimeType);
+			ShareCompat.configureMenuItem(item, shareIntent);
+		} else {
+			item.setVisible(false);
+		}
+	}
+	
+
+	private void setImageUri(Uri uri, String mimeType) {
+		mImageUri = uri;
+		mMimeType = mimeType;
+		if (mMenuShare != null) {
+			configureShareItem(mMenuShare);
+		}
 	}
 }
