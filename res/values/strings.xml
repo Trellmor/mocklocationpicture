@@ -18,7 +18,8 @@
 -->
 <resources>
 
-    <string name="app_name">Mock Location</string>
+    <string name="app_name">Mock Location from Picture</string>
+    <string name="activity_name">Mock Location</string>
     <string name="action_settings">Settings</string>
     <string name="action_share">Share</string>
     <string name="clear">Clear</string>
