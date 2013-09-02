@@ -20,6 +20,7 @@ package com.trellmor.mocklocationpicture;
 
 import java.io.IOException;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -28,6 +29,7 @@ import android.database.Cursor;
 import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.Settings;
@@ -36,10 +38,12 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-public class MLPActivity extends Activity {
+public class MLPActivity extends Activity implements
+		ViewTreeObserver.OnGlobalLayoutListener {
 	private static final String TAG = MLPActivity.class.getName();
 	
 	private ImageView mImagePreview;
@@ -130,7 +134,7 @@ public class MLPActivity extends Activity {
 		}
 		return super.onOptionsItemSelected(item);
 	}
-	
+
 	public void clear(View v) {
 		setImageUri(null, null);
 		stopService(new Intent(this, MockLocationService.class));
@@ -171,28 +175,39 @@ public class MLPActivity extends Activity {
 	}
 
 	static final int MAX_BITMAP_DIM = 2048;
+
 	private void showPreview(String path) {
+		final int maxHeight = mImagePreview.getHeight();
+		final int maxWidth = mImagePreview.getWidth();
+
+		if (maxHeight == 0 || maxWidth == 0) {
+			// Layout not loaded yet, delay
+			mImagePreview.getViewTreeObserver().addOnGlobalLayoutListener(this);
+			return;
+		}
+
 		BitmapFactory.Options options = new BitmapFactory.Options();
 		options.inJustDecodeBounds = true;
 		BitmapFactory.decodeFile(path, options);
-		
-		
+
 		int height = options.outHeight;
 		int width = options.outWidth;
 		int inSampleSize = 1;
-		
+
 		while (true) {
 			if (width <= MAX_BITMAP_DIM && height <= MAX_BITMAP_DIM) {
-				break;
+				if (width <= maxWidth && height <= maxHeight) {
+					break;
+				}
 			}
-			
+
 			width /= 2;
 			height /= 2;
 			inSampleSize *= 2;
 		}
 		options.inSampleSize = inSampleSize;
 		options.inJustDecodeBounds = false;
-		
+
 		mImagePreview.setImageBitmap(BitmapFactory.decodeFile(path, options));
 	}
 	
@@ -214,6 +229,22 @@ public class MLPActivity extends Activity {
 		mMimeType = mimeType;
 		if (mMenuShare != null) {
 			configureShareItem(mMenuShare);
+		}
+	}
+
+	@SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
+	@Override
+	public void onGlobalLayout() {
+		ViewTreeObserver obs = mImagePreview.getViewTreeObserver();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+			obs.removeOnGlobalLayoutListener(this);
+		} else {
+			obs.removeGlobalOnLayoutListener(this);
+		}
+
+		if (mImageUri != null) {
+			showPreview(convertMediaUriToPath(mImageUri));
 		}
 	}
 }
