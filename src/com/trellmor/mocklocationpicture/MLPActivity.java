@@ -38,6 +38,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.v4.app.ShareCompat;
 import android.util.Log;
@@ -53,6 +54,8 @@ public class MLPActivity extends Activity implements
 	private static final String TAG = MLPActivity.class.getName();
 
 	private static final String KEY_IMAGE_URI = "IMAGE_URI";
+
+	private final static int ACTIVITY_SELECT_IMAGE = 0;
 
 	private ImageView mImagePreview;
 	private MenuItem mMenuShare;
@@ -132,10 +135,40 @@ public class MLPActivity extends Activity implements
 		}
 	}
 
-	public void clear(View v) {
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+
+		switch (requestCode) {
+		case ACTIVITY_SELECT_IMAGE:
+			if (resultCode == RESULT_OK) {
+				Uri imageUri = data.getData();
+				setImageUri(imageUri);
+			}
+			break;
+		}
+	}
+
+	public void onButtonClearClick(View v) {
+		clear();
+	}
+
+	public void onButtonLoadClick(View v) {
+		load();
+	}
+
+	private void clear() {
 		setImageUri(null);
 		stopService(new Intent(this, MockLocationService.class));
 		mImagePreview.setImageBitmap(null);
+		configureShareItem(mMenuShare, null, null);
+	}
+
+	private void load() {
+		clear();
+		Intent intent = new Intent(Intent.ACTION_PICK,
+				MediaStore.Images.Media.INTERNAL_CONTENT_URI);
+		startActivityForResult(intent, ACTIVITY_SELECT_IMAGE);
 	}
 
 	private boolean isMockLocationEnabled() {
@@ -153,18 +186,21 @@ public class MLPActivity extends Activity implements
 	private void setImageUri(Uri uri) {
 		mImageUri = uri;
 
-		final int maxHeight = mImagePreview.getHeight();
-		final int maxWidth = mImagePreview.getWidth();
+		if (mImageUri != null) {
+			final int maxHeight = mImagePreview.getHeight();
+			final int maxWidth = mImagePreview.getWidth();
 
-		if (maxHeight == 0 || maxWidth == 0) {
-			// Layout not loaded yet, delay
-			mImagePreview.getViewTreeObserver().addOnGlobalLayoutListener(this);
-			return;
+			if (maxHeight == 0 || maxWidth == 0) {
+				// Layout not loaded yet, delay
+				mImagePreview.getViewTreeObserver().addOnGlobalLayoutListener(
+						this);
+				return;
+			}
+
+			// Cache image locally
+			LoadImageTask task = new LoadImageTask();
+			task.execute(mImageUri);
 		}
-
-		// Cache image locally
-		LoadImageTask task = new LoadImageTask();
-		task.execute(mImageUri);
 	}
 
 	@SuppressWarnings("deprecation")

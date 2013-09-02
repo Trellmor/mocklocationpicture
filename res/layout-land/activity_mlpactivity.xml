@@ -29,13 +29,24 @@
         android:id="@+id/layout_left"
         android:layout_alignParentLeft="true"
         android:layout_width="wrap_content"
-        android:layout_height="fill_parent">
-        <Button 
-            android:id="@+id/button_clear"
-            android:onClick="clear"
-            android:text="@string/clear"
+        android:layout_height="fill_parent"
+        android:paddingRight="10dp">
+
+        <Button
+            android:id="@+id/button_load"
+            android:onClick="onButtonLoadClick"
+            android:text="@string/load"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
+        
+        <Button 
+            android:id="@+id/button_clear"
+            android:onClick="onButtonClearClick"
+            android:text="@string/clear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/button_load" />
+            
     </RelativeLayout>
     
     <ImageView
