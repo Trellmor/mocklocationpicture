@@ -18,20 +18,26 @@
 
 package com.trellmor.mocklocationpicture;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.v4.app.ShareCompat;
 import android.util.Log;
@@ -45,12 +51,13 @@ import android.widget.Toast;
 public class MLPActivity extends Activity implements
 		ViewTreeObserver.OnGlobalLayoutListener {
 	private static final String TAG = MLPActivity.class.getName();
-	
+
+	private static final String KEY_IMAGE_URI = "IMAGE_URI";
+
 	private ImageView mImagePreview;
 	private MenuItem mMenuShare;
-	
+
 	private Uri mImageUri = null;
-	private String mMimeType;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -66,10 +73,10 @@ public class MLPActivity extends Activity implements
 		if (Intent.ACTION_SEND.equals(action) && type != null
 				&& type.startsWith("image/")) {
 			// Started by share intent, display preview image
-			setImageUri((Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM), type);
-			if (mImageUri != null) {
-				showPreview(convertMediaUriToPath(mImageUri));
-			}
+			setImageUri((Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM));
+			intent.setAction("");
+		} else if (savedInstanceState != null) {
+			setImageUri((Uri) savedInstanceState.getParcelable(KEY_IMAGE_URI));
 		}
 	}
 
@@ -91,25 +98,6 @@ public class MLPActivity extends Activity implements
 					});
 			dialog.setNegativeButton(android.R.string.cancel, null);
 			dialog.create().show();
-		} else {
-			if (mImageUri != null) {
-				String filename = convertMediaUriToPath(mImageUri);
-				if (filename != null) {
-					try {
-						ExifInterface exif = new ExifInterface(filename);
-
-						float[] latlong = new float[2];
-						if (exif.getLatLong(latlong)) {
-							setMockLocation(latlong[0], latlong[1]);
-						} else {
-							Toast.makeText(this, R.string.exif_no_latlong,
-									Toast.LENGTH_SHORT).show();
-						}
-					} catch (IOException e) {
-						Log.e(TAG, "Failed get location from image", e);
-					}
-				}
-			}
 		}
 	};
 
@@ -119,8 +107,7 @@ public class MLPActivity extends Activity implements
 		getMenuInflater().inflate(R.menu.mlpactivity, menu);
 
 		mMenuShare = menu.findItem(R.id.action_share);
-		configureShareItem(mMenuShare);
-		
+
 		// Return true to display menu
 		return true;
 	}
@@ -135,8 +122,18 @@ public class MLPActivity extends Activity implements
 		return super.onOptionsItemSelected(item);
 	}
 
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		super.onSaveInstanceState(outState);
+		if (mImageUri != null) {
+			outState.putParcelable(KEY_IMAGE_URI, mImageUri);
+		} else {
+			outState.remove(KEY_IMAGE_URI);
+		}
+	}
+
 	public void clear(View v) {
-		setImageUri(null, null);
+		setImageUri(null);
 		stopService(new Intent(this, MockLocationService.class));
 		mImagePreview.setImageBitmap(null);
 	}
@@ -153,30 +150,9 @@ public class MLPActivity extends Activity implements
 		startActivity(intent);
 	}
 
-	private void setMockLocation(float latitude, float longitude) {
-		Intent intent = new Intent(this, MockLocationService.class);
-		intent.putExtra(MockLocationService.EXTRA_LATITUDE, latitude);
-		intent.putExtra(MockLocationService.EXTRA_LONGITUDE, longitude);
-		startService(intent);
-	}
+	private void setImageUri(Uri uri) {
+		mImageUri = uri;
 
-	private String convertMediaUriToPath(Uri uri) {
-		String path = null;
-
-		String[] proj = { MediaStore.Images.Media.DATA };
-		Cursor cursor = getContentResolver().query(uri, proj, null, null, null);
-		if (cursor.getCount() > 0) {
-			cursor.moveToFirst();
-			path = cursor.getString(cursor
-					.getColumnIndexOrThrow(MediaStore.Images.Media.DATA));
-			cursor.close();
-		}
-		return path;
-	}
-
-	static final int MAX_BITMAP_DIM = 2048;
-
-	private void showPreview(String path) {
 		final int maxHeight = mImagePreview.getHeight();
 		final int maxWidth = mImagePreview.getWidth();
 
@@ -186,50 +162,9 @@ public class MLPActivity extends Activity implements
 			return;
 		}
 
-		BitmapFactory.Options options = new BitmapFactory.Options();
-		options.inJustDecodeBounds = true;
-		BitmapFactory.decodeFile(path, options);
-
-		int height = options.outHeight;
-		int width = options.outWidth;
-		int inSampleSize = 1;
-
-		while (true) {
-			if (width <= MAX_BITMAP_DIM && height <= MAX_BITMAP_DIM) {
-				if (width <= maxWidth && height <= maxHeight) {
-					break;
-				}
-			}
-
-			width /= 2;
-			height /= 2;
-			inSampleSize *= 2;
-		}
-		options.inSampleSize = inSampleSize;
-		options.inJustDecodeBounds = false;
-
-		mImagePreview.setImageBitmap(BitmapFactory.decodeFile(path, options));
-	}
-	
-	private void configureShareItem(MenuItem item) {
-		if (mImageUri != null) {
-			item.setVisible(true);
-			ShareCompat.IntentBuilder shareIntent = ShareCompat.IntentBuilder.from(this);
-			shareIntent.setStream(mImageUri);
-			shareIntent.setType(mMimeType);
-			ShareCompat.configureMenuItem(item, shareIntent);
-		} else {
-			item.setVisible(false);
-		}
-	}
-	
-
-	private void setImageUri(Uri uri, String mimeType) {
-		mImageUri = uri;
-		mMimeType = mimeType;
-		if (mMenuShare != null) {
-			configureShareItem(mMenuShare);
-		}
+		// Cache image locally
+		LoadImageTask task = new LoadImageTask();
+		task.execute(mImageUri);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -244,7 +179,156 @@ public class MLPActivity extends Activity implements
 		}
 
 		if (mImageUri != null) {
-			showPreview(convertMediaUriToPath(mImageUri));
+			setImageUri(mImageUri);
+		}
+	}
+
+	private void configureShareItem(MenuItem item, Uri uri, String mimeType) {
+		if (uri != null) {
+			item.setVisible(true);
+			ShareCompat.IntentBuilder shareIntent = ShareCompat.IntentBuilder
+					.from(MLPActivity.this);
+			shareIntent.setStream(uri);
+			shareIntent.setType(mimeType);
+			ShareCompat.configureMenuItem(item, shareIntent);
+		} else {
+			item.setVisible(false);
+		}
+	}
+
+	private class LoadImageTask extends AsyncTask<Uri, Void, Boolean> {
+		private Uri mUri = null;
+		private int mMaxWidth = 0;
+		private int mMaxHeight = 0;
+		private Bitmap mPreview = null;
+		private String mMimeType = null;
+
+		public LoadImageTask() {
+			if (mImagePreview != null) {
+				mMaxWidth = mImagePreview.getWidth();
+				mMaxHeight = mImagePreview.getHeight();
+			}
+		}
+
+		@Override
+		protected Boolean doInBackground(Uri... params) {
+			if (params.length == 0)
+				return false;
+
+			mUri = params[0];
+			if (mUri == null)
+				return false;
+
+			Context context = getApplicationContext();
+
+			InputStream is;
+			OutputStream os;
+			File temp = null;
+			try {
+				temp = File.createTempFile("tmp", null, context.getCacheDir());
+				temp.getParentFile().mkdirs();
+				is = context.getContentResolver().openInputStream(mUri);
+				try {
+					os = new FileOutputStream(temp);
+					try {
+						byte[] buffer = new byte[1024];
+						int read;
+
+						while ((read = is.read(buffer)) != -1) {
+							os.write(buffer, 0, read);
+						}
+
+						os.flush();
+					} finally {
+						os.close();
+					}
+
+					setMockLocation(temp.getAbsolutePath());
+					mPreview = createPreview(temp.getAbsolutePath());
+				} finally {
+					is.close();
+				}
+			} catch (FileNotFoundException e) {
+				Log.wtf(TAG, e);
+				return false;
+			} catch (IOException e) {
+				Log.e(TAG, e.getMessage(), e);
+				return false;
+			} finally {
+				if (temp != null && temp.exists()) {
+					temp.delete();
+				}
+			}
+
+			return true;
+		}
+
+		@Override
+		protected void onPostExecute(Boolean result) {
+			if (result) {
+				if (mImagePreview != null) {
+					mImagePreview.setImageBitmap(mPreview);
+				}
+
+				if (mMenuShare != null) {
+					configureShareItem(mMenuShare, mUri, mMimeType);
+				}
+			}
+		}
+
+		static final int MAX_BITMAP_DIM = 2048;
+
+		private Bitmap createPreview(String path) {
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			options.inJustDecodeBounds = true;
+			BitmapFactory.decodeFile(path, options);
+
+			int height = options.outHeight;
+			int width = options.outWidth;
+			mMimeType = options.outMimeType;
+			int inSampleSize = 1;
+
+			while (true) {
+				if (width <= MAX_BITMAP_DIM && height <= MAX_BITMAP_DIM) {
+					if (width <= mMaxWidth && height <= mMaxHeight) {
+						break;
+					}
+				}
+
+				width /= 2;
+				height /= 2;
+				inSampleSize *= 2;
+			}
+			options.inSampleSize = inSampleSize;
+			options.inJustDecodeBounds = false;
+
+			return BitmapFactory.decodeFile(path, options);
+		}
+
+		private void setMockLocation(String path) {
+			if (isMockLocationEnabled()) {
+
+				try {
+					ExifInterface exif = new ExifInterface(path);
+
+					float[] latlong = new float[2];
+					if (exif.getLatLong(latlong)) {
+						Intent intent = new Intent(getApplicationContext(),
+								MockLocationService.class);
+						intent.putExtra(MockLocationService.EXTRA_LATITUDE,
+								latlong[0]);
+						intent.putExtra(MockLocationService.EXTRA_LONGITUDE,
+								latlong[1]);
+						startService(intent);
+					} else {
+						Toast.makeText(getApplicationContext(),
+								R.string.exif_no_latlong, Toast.LENGTH_SHORT)
+								.show();
+					}
+				} catch (IOException e) {
+					Log.e(TAG, "Failed get location from image", e);
+				}
+			}
 		}
 	}
 }
