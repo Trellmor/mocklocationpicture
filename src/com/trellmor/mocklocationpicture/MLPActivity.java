@@ -1,6 +1,7 @@
 /*
  * Mock Locations from Picture
  * Copyright (C) 2013 Daniel Triendl <daniel@pew.cc>
+ *	Copyright (C) 2013 Patrik Mallaun <patrik@mallaun.com>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
