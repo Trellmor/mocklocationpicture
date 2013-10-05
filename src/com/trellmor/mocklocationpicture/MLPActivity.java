@@ -104,6 +104,15 @@ public class MLPActivity extends Activity implements
 			dialog.create().show();
 		}
 	};
+	
+	@Override
+	protected void onPause(){
+		super.onPause();
+		
+		this.finish();
+	};
+	
+	
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -313,6 +322,11 @@ public class MLPActivity extends Activity implements
 			}
 			
 			if (!result) {
+				if (!isMockLocationEnabled())
+					Toast.makeText(getApplicationContext(),
+							R.string.mock_locations_disabled, Toast.LENGTH_SHORT)
+							.show();
+				else
 				Toast.makeText(getApplicationContext(),
 						R.string.exif_no_latlong, Toast.LENGTH_SHORT)
 						.show();
